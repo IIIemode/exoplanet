@@ -1,3 +1,12 @@
+/*
+Instructions:
+(1) Get the planet data and add the search header.
+(2) Create the first thumbnail with createPlanetThumb(data)
+(3) Handle errors!
+  (a) Pass 'unknown' to the search header.
+  (b) console.log the error.
+ */
+
 // Inline configuration for jshint below. Prevents `gulp jshint` from failing with quiz starter code.
 /* jshint unused: false */
 
@@ -6,45 +15,49 @@
 
   var home = null;
 
-  function addSearchHeader(response) {
-    try {
-      response = JSON.parse(response).query;
-    } catch (e) {
-      // it's 'unknown', so leave it alone
+  function addSearchHeader(query) {
+    home.innerHTML = '<h2 class="page-title">query: ' + query + '</h2>';
+  }
+
+  function createPlanetThumb(data) {
+    var pT = document.createElement('planet-thumb');
+
+    for (var d in data) {
+      pT[d] = data[d];
     }
-    home.innerHTML = '<h2 class="page-title">query: ' + response + '</h2>';
+    
+    home.appendChild(pT);
   }
 
   function get(url) {
-    /*
-    This code needs to get wrapped in a Promise!
-     */
-    var req = new XMLHttpRequest();
+    return fetch(url, {
+      method: 'get'
+    });
+  }
 
-    req.open('GET', url);
-    req.onload = function() {
-      if (req.status === 200) {
-        // It worked!
-        // You'll want to resolve with the data from req.response
-      } else {
-        // It failed :(
-        // Be nice and reject with req.statusText
-      }
-    };
-    req.onerror = function() {
-      // It failed :(
-      // Pass a 'Network Error' to reject
-    };
-    req.send();
+  function getJSON(url) {
+    return get(url).then(function(response) {
+      return response.json();
+    });
   }
 
   window.addEventListener('WebComponentsReady', function() {
     home = document.querySelector('section[data-route="home"]');
-    /*
-    Uncomment the next line you're ready to start chaining and testing!
-    You'll need to add a .then and a .catch. Pass the response to addSearchHeader on resolve or
-    pass 'unknown' to addSearchHeader if it rejects.
-     */
-    // get('../data/earth-like-results.json')
+
+    getJSON('../data/earth-like-results.json')
+    .then(function(response) {
+      addSearchHeader(response.query);
+      return getJSON(response.results[0]);
+    })
+    .catch(function() {
+      throw Error('Search Request Error');
+    })
+    .then(function(planetData) {
+      createPlanetThumb(planetData);
+    })
+    .catch(function(e) {
+      addSearchHeader('unknown');
+      console.log(e);
+    });
   });
 })(document);
