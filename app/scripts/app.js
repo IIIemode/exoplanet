@@ -1,3 +1,12 @@
+/*
+Instructions:
+(1) Refactor .forEach below to create a sequence of Promises that always resolves in the same
+    order it was created.
+  (a) Fetch each planet's JSON from the array of URLs in the search results.
+  (b) Call createPlanetThumb on each planet's response data to add it to the page.
+(2) Use developer tools to determine if the planets are being fetched in series or in parallel.
+ */
+
 // Inline configuration for jshint below. Prevents `gulp jshint` from failing with quiz starter code.
 /* jshint unused: false */
 
@@ -6,45 +15,46 @@
 
   var home = null;
 
-  function addSearchHeader(response) {
-    try {
-      response = JSON.parse(response).query;
-    } catch (e) {
-      // it's 'unknown', so leave it alone
+  function addSearchHeader(query) {
+    home.innerHTML = '<h2 class="page-title">query: ' + query + '</h2>';
+  }
+
+  function createPlanetThumb(data) {
+    var pT = document.createElement('planet-thumb');
+    for (var d in data) {
+      pT[d] = data[d];
     }
-    home.innerHTML = '<h2 class="page-title">query: ' + response + '</h2>';
+    home.appendChild(pT);
   }
 
   function get(url) {
-    /*
-    This code needs to get wrapped in a Promise!
-     */
-    var req = new XMLHttpRequest();
+    return fetch(url);
+  }
 
-    req.open('GET', url);
-    req.onload = function() {
-      if (req.status === 200) {
-        // It worked!
-        // You'll want to resolve with the data from req.response
-      } else {
-        // It failed :(
-        // Be nice and reject with req.statusText
-      }
-    };
-    req.onerror = function() {
-      // It failed :(
-      // Pass a 'Network Error' to reject
-    };
-    req.send();
+  function getJSON(url) {
+    return get(url).then(function(response) {
+      return response.json();
+    });
   }
 
   window.addEventListener('WebComponentsReady', function() {
     home = document.querySelector('section[data-route="home"]');
-    /*
-    Uncomment the next line you're ready to start chaining and testing!
-    You'll need to add a .then and a .catch. Pass the response to addSearchHeader on resolve or
-    pass 'unknown' to addSearchHeader if it rejects.
-     */
-    // get('../data/earth-like-results.json')
+
+    getJSON('../data/earth-like-results.json')
+    .then(function(response) {
+      var sequence = Promise.resolve();
+
+      addSearchHeader(response.query);
+
+      response.results.forEach(function(url) {
+        sequence = sequence.then(function() {
+          return getJSON(url);
+        })
+        .then(createPlanetThumb);
+      });
+    })
+    .catch(function(e) {
+      console.log(e);
+    });
   });
 })(document);
